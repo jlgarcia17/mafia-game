@@ -874,6 +874,7 @@ async function endGame(winner) {
 // ---------- RESULT ----------
 function handleResult(data) {
   if (dayTimerInterval) clearInterval(dayTimerInterval);
+  if (isHost && gameRef) gameRef.remove();
   showScreen('resultScreen');
   const winner     = data.winner;
   const players    = data.players || {};

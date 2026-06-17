@@ -726,7 +726,19 @@ function handleResult(data) {
   html += `</div><button class="btn" style="margin-top:16px;" onclick="location.reload()">Play Again</button>`;
   document.getElementById('resultContent').innerHTML = html;
 }
-
+window.createRoom = createRoom;
+window.joinRoom = joinRoom;
+window.showJoin = showJoin;
+window.copyCode = copyCode;
+window.startGame = startGame;
+window.readyUp = readyUp;
+window.resolveNight = resolveNight;
+window.pickKill = pickKill;
+window.pickHeal = pickHeal;
+window.pickWise = pickWise;
+window.castVote = castVote;
+window.castSkip = castSkip;
+window.resolveDay = resolveDay;
 </script>
 </body>
 </html>

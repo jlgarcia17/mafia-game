@@ -208,6 +208,85 @@ const firebaseConfig = {
   appId: "1:987295469404:web:0adda9023720147627bb99"
 };
 
+ // ============================================================
+//  SOUNDS
+// ============================================================
+function playGong() {
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const frequencies = [80, 160, 240];
+  frequencies.forEach((freq, i) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.02);
+    osc.frequency.exponentialRampToValueAtTime(freq * 0.5, ctx.currentTime + 3);
+    gain.gain.setValueAtTime(0, ctx.currentTime + i * 0.02);
+    gain.gain.linearRampToValueAtTime(i === 0 ? 0.6 : 0.3, ctx.currentTime + i * 0.02 + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 3);
+    osc.start(ctx.currentTime + i * 0.02);
+    osc.stop(ctx.currentTime + 3);
+  });
+  const noise = ctx.createOscillator();
+  const noiseGain = ctx.createGain();
+  noise.connect(noiseGain);
+  noiseGain.connect(ctx.destination);
+  noise.type = 'sawtooth';
+  noise.frequency.setValueAtTime(120, ctx.currentTime);
+  noiseGain.gain.setValueAtTime(0.15, ctx.currentTime);
+  noiseGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+  noise.start(ctx.currentTime);
+  noise.stop(ctx.currentTime + 0.3);
+}
+
+function playHealingRing() {
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const notes = [523, 659, 784, 1047];
+  notes.forEach((freq, i) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.15);
+    gain.gain.setValueAtTime(0, ctx.currentTime + i * 0.15);
+    gain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + i * 0.15 + 0.05);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.15 + 1.2);
+    osc.start(ctx.currentTime + i * 0.15);
+    osc.stop(ctx.currentTime + i * 0.15 + 1.2);
+  });
+}
+
+function playMagicRing() {
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const notes = [392, 494, 587, 740, 988];
+  notes.forEach((freq, i) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    const shimmer = ctx.createOscillator();
+    const shimmerGain = ctx.createGain();
+    osc.connect(gain);
+    shimmer.connect(shimmerGain);
+    gain.connect(ctx.destination);
+    shimmerGain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.12);
+    osc.frequency.linearRampToValueAtTime(freq * 1.05, ctx.currentTime + i * 0.12 + 0.5);
+    gain.gain.setValueAtTime(0, ctx.currentTime + i * 0.12);
+    gain.gain.linearRampToValueAtTime(0.25, ctx.currentTime + i * 0.12 + 0.05);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.12 + 1.5);
+    osc.start(ctx.currentTime + i * 0.12);
+    osc.stop(ctx.currentTime + i * 0.12 + 1.5);
+    shimmer.type = 'sine';
+    shimmer.frequency.setValueAtTime(freq * 2, ctx.currentTime + i * 0.12);
+    shimmerGain.gain.setValueAtTime(0, ctx.currentTime + i * 0.12);
+    shimmerGain.gain.linearRampToValueAtTime(0.08, ctx.currentTime + i * 0.12 + 0.05);
+    shimmerGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.12 + 0.8);
+    shimmer.start(ctx.currentTime + i * 0.12);
+    shimmer.stop(ctx.currentTime + i * 0.12 + 0.8);
+  });
+}
 // ============================================================
 
 firebase.initializeApp(firebaseConfig);
@@ -444,7 +523,20 @@ function renderNight(data) {
   let html = `<div class="card"><p style="font-size:12px;color:#7a6a50;letter-spacing:1px;margin-bottom:4px;">NIGHT ${night}</p>`;
 
   if (myRole === 'mafia') {
+    const allMafiaIds = alive.filter(([id]) => roles[id] === 'mafia').map(([id]) => id);
+    const allMafiaVotes = allMafiaIds.map(id => kills[id]).filter(Boolean);
+    const allAgree = allMafiaIds.length > 0 && allMafiaVotes.length === allMafiaIds.length && allMafiaVotes.every(v => v === allMafiaVotes[0]);
+    const disagreement = allMafiaVotes.length > 1 && !allMafiaVotes.every(v => v === allMafiaVotes[0]);
     html += `<h2 style="color:#cc4444;">🔪 Choose a target to eliminate</h2>`;
+    if (allMafiaIds.length > 1) {
+      html += `<div class="info-box warning" style="margin-bottom:10px;">⚠️ All Mafia members must vote for the same person before the choice is locked in.</div>`;
+    }
+    if (disagreement) {
+      html += `<div class="info-box" style="background:#1a0808;border-color:#6a1010;color:#cc4444;margin-bottom:10px;">❌ Mafia members have chosen different targets — agree on the same person to proceed.</div>`;
+    }
+    if (allAgree && allMafiaIds.length > 0) {
+      html += `<div class="info-box" style="background:#080808;border-color:#1a4a1a;color:#44cc44;margin-bottom:10px;">✓ All Mafia agreed — target locked in.</div>`;
+    }
     html += `<ul class="pick-list">`;
     alive.forEach(([id, p]) => {
       if (id === myId) return;
@@ -452,7 +544,6 @@ function renderNight(data) {
       html += `<li class="${sel}" onclick="pickKill('${id}')">${p.name}</li>`;
     });
     html += `</ul>`;
-    if (myKill) html += `<div class="info-box">Target chosen. Waiting for others…</div>`;
 
   } else if (myRole === 'doctor') {
     html += `<h2 style="color:#4444cc;">💉 Choose someone to protect</h2>`;
@@ -514,12 +605,27 @@ function renderNight(data) {
   document.getElementById('nightContent').innerHTML = html;
 }
 
-async function pickKill(targetId)  { await gameRef.child('kills/' + myId).set(targetId); }
-async function pickHeal(targetId)  { await gameRef.child('heals/' + myId).set(targetId); }
+async function pickKill(targetId) {
+  await gameRef.child('kills/' + myId).set(targetId);
+  const snap = await gameRef.once('value');
+  const data = snap.val();
+  const players = data.players || {};
+  const roles = data.roles || {};
+  const kills = data.kills || {};
+  const alive = Object.entries(players).filter(([, p]) => p.alive);
+  const allMafiaIds = alive.filter(([id]) => roles[id] === 'mafia').map(([id]) => id);
+  const allVotes = allMafiaIds.map(id => kills[id]).filter(Boolean);
+  const allAgree = allVotes.length === allMafiaIds.length && allVotes.every(v => v === allVotes[0]);
+  if (allAgree) playGong();
+}async function pickHeal(targetId) {
+  await gameRef.child('heals/' + myId).set(targetId);
+  playHealingRing();
+}
 async function pickWise(targetId, targetName) {
-  const roles   = gameState.roles || {};
+  const roles = gameState.roles || {};
   const isMafia = roles[targetId] === 'mafia';
   await gameRef.child('wiseResults/' + myId).set({ name: targetName, isMafia });
+  playMagicRing();
 }
 
 // ---------- RESOLVE NIGHT ----------

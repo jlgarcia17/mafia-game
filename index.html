@@ -213,31 +213,74 @@ const firebaseConfig = {
 // ============================================================
 function playGong() {
   const ctx = new (window.AudioContext || window.webkitAudioContext)();
-  const frequencies = [80, 160, 240];
-  frequencies.forEach((freq, i) => {
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.02);
-    osc.frequency.exponentialRampToValueAtTime(freq * 0.5, ctx.currentTime + 3);
-    gain.gain.setValueAtTime(0, ctx.currentTime + i * 0.02);
-    gain.gain.linearRampToValueAtTime(i === 0 ? 0.6 : 0.3, ctx.currentTime + i * 0.02 + 0.01);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 3);
-    osc.start(ctx.currentTime + i * 0.02);
-    osc.stop(ctx.currentTime + 3);
+
+  // Deep rumble base
+  const rumble = ctx.createOscillator();
+  const rumbleGain = ctx.createGain();
+  rumble.connect(rumbleGain);
+  rumbleGain.connect(ctx.destination);
+  rumble.type = 'sine';
+  rumble.frequency.setValueAtTime(40, ctx.currentTime);
+  rumble.frequency.exponentialRampToValueAtTime(25, ctx.currentTime + 4);
+  rumbleGain.gain.setValueAtTime(0, ctx.currentTime);
+  rumbleGain.gain.linearRampToValueAtTime(0.5, ctx.currentTime + 0.1);
+  rumbleGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 4);
+  rumble.start(ctx.currentTime);
+  rumble.stop(ctx.currentTime + 4);
+
+  // Dark descending tone
+  const dark = ctx.createOscillator();
+  const darkGain = ctx.createGain();
+  dark.connect(darkGain);
+  darkGain.connect(ctx.destination);
+  dark.type = 'sawtooth';
+  dark.frequency.setValueAtTime(120, ctx.currentTime + 0.05);
+  dark.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 3.5);
+  darkGain.gain.setValueAtTime(0, ctx.currentTime + 0.05);
+  darkGain.gain.linearRampToValueAtTime(0.25, ctx.currentTime + 0.15);
+  darkGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 3.5);
+  dark.start(ctx.currentTime + 0.05);
+  dark.stop(ctx.currentTime + 3.5);
+
+  // Eerie high whine that fades in slowly
+  const whine = ctx.createOscillator();
+  const whineGain = ctx.createGain();
+  whine.connect(whineGain);
+  whineGain.connect(ctx.destination);
+  whine.type = 'sine';
+  whine.frequency.setValueAtTime(320, ctx.currentTime + 0.3);
+  whine.frequency.exponentialRampToValueAtTime(180, ctx.currentTime + 4);
+  whineGain.gain.setValueAtTime(0, ctx.currentTime + 0.3);
+  whineGain.gain.linearRampToValueAtTime(0.12, ctx.currentTime + 1.2);
+  whineGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 4);
+  whine.start(ctx.currentTime + 0.3);
+  whine.stop(ctx.currentTime + 4);
+
+  // Sharp stab at the start
+  const stab = ctx.createOscillator();
+  const stabGain = ctx.createGain();
+  stab.connect(stabGain);
+  stabGain.connect(ctx.destination);
+  stab.type = 'square';
+  stab.frequency.setValueAtTime(90, ctx.currentTime);
+  stabGain.gain.setValueAtTime(0.4, ctx.currentTime);
+  stabGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+  stab.start(ctx.currentTime);
+  stab.stop(ctx.currentTime + 0.4);
+
+  // Low pulse thuds
+  [0, 0.6, 1.1].forEach(t => {
+    const pulse = ctx.createOscillator();
+    const pulseGain = ctx.createGain();
+    pulse.connect(pulseGain);
+    pulseGain.connect(ctx.destination);
+    pulse.type = 'sine';
+    pulse.frequency.setValueAtTime(55, ctx.currentTime + t);
+    pulseGain.gain.setValueAtTime(0.35, ctx.currentTime + t);
+    pulseGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.35);
+    pulse.start(ctx.currentTime + t);
+    pulse.stop(ctx.currentTime + t + 0.35);
   });
-  const noise = ctx.createOscillator();
-  const noiseGain = ctx.createGain();
-  noise.connect(noiseGain);
-  noiseGain.connect(ctx.destination);
-  noise.type = 'sawtooth';
-  noise.frequency.setValueAtTime(120, ctx.currentTime);
-  noiseGain.gain.setValueAtTime(0.15, ctx.currentTime);
-  noiseGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
-  noise.start(ctx.currentTime);
-  noise.stop(ctx.currentTime + 0.3);
 }
 
 function playHealingRing() {
@@ -546,34 +589,49 @@ function renderNight(data) {
     html += `</ul>`;
 
   } else if (myRole === 'doctor') {
-    html += `<h2 style="color:#4444cc;">💉 Choose someone to protect</h2>`;
-    html += `<ul class="pick-list">`;
-    alive.forEach(([id, p]) => {
-      const blocked = id === lastHeal;
-      const sel     = myHeal === id ? ' selected' : '';
-      if (blocked) {
-        html += `<li style="opacity:0.4;cursor:not-allowed;">${p.name} (healed last night)</li>`;
-      } else {
-        html += `<li class="${sel}" onclick="pickHeal('${id}')">${p.name}</li>`;
-      }
-    });
-    html += `</ul>`;
-    if (myHeal) html += `<div class="info-box" style="background:#080820;border-color:#2020aa;color:#6666cc;">Protection chosen. Waiting for others…</div>`;
-
-  } else if (myRole === 'wise') {
-    html += `<h2 style="color:#aa44cc;">🔮 Investigate a player</h2>`;
-    if (myWise) {
-      html += `<div class="info-box" style="background:#120820;border-color:#502060;color:#cc88ee;">Investigation complete.</div>`;
-      html += `<div class="card" style="text-align:center;padding:20px;">`;
-      html += `<span class="tag ${myWise.isMafia ? 'mafia' : 'town'}" style="font-size:14px;padding:6px 16px;">`;
-      html += `${myWise.name} is ${myWise.isMafia ? 'MAFIA' : 'NOT MAFIA'}</span></div>`;
+    const iAmAlive = players[myId]?.alive;
+    if (!iAmAlive) {
+      html += `<div class="role-card" style="padding:20px;">`;
+      html += `<div style="font-size:36px;margin-bottom:8px;">☠️</div>`;
+      html += `<p style="color:#7a6a50;">You have been eliminated. Your healing powers are gone.</p>`;
+      html += `</div>`;
     } else {
+      html += `<h2 style="color:#4444cc;">💉 Choose someone to protect</h2>`;
       html += `<ul class="pick-list">`;
       alive.forEach(([id, p]) => {
-        if (id === myId) return;
-        html += `<li onclick="pickWise('${id}','${p.name.replace(/'/g,"&#39;")}')">${p.name}</li>`;
+        const blocked = id === lastHeal;
+        const sel     = myHeal === id ? ' selected' : '';
+        if (blocked) {
+          html += `<li style="opacity:0.4;cursor:not-allowed;">${p.name} (healed last night)</li>`;
+        } else {
+          html += `<li class="${sel}" onclick="pickHeal('${id}')">${p.name}</li>`;
+        }
       });
       html += `</ul>`;
+      if (myHeal) html += `<div class="info-box" style="background:#080820;border-color:#2020aa;color:#6666cc;">Protection chosen. Waiting for others…</div>`;
+    }
+  } else if (myRole === 'wise') {
+    const iAmAlive = players[myId]?.alive;
+    if (!iAmAlive) {
+      html += `<div class="role-card" style="padding:20px;">`;
+      html += `<div style="font-size:36px;margin-bottom:8px;">☠️</div>`;
+      html += `<p style="color:#7a6a50;">You have been eliminated. Your gift of sight is lost.</p>`;
+      html += `</div>`;
+    } else {
+      html += `<h2 style="color:#aa44cc;">🔮 Investigate a player</h2>`;
+      if (myWise) {
+        html += `<div class="info-box" style="background:#120820;border-color:#502060;color:#cc88ee;">Investigation complete.</div>`;
+        html += `<div class="card" style="text-align:center;padding:20px;">`;
+        html += `<span class="tag ${myWise.isMafia ? 'mafia' : 'town'}" style="font-size:14px;padding:6px 16px;">`;
+        html += `${myWise.name} is ${myWise.isMafia ? 'MAFIA' : 'NOT MAFIA'}</span></div>`;
+      } else {
+        html += `<ul class="pick-list">`;
+        alive.forEach(([id, p]) => {
+          if (id === myId) return;
+          html += `<li onclick="pickWise('${id}','${p.name.replace(/'/g,"&#39;")}')">${p.name}</li>`;
+        });
+        html += `</ul>`;
+      }
     }
 
   } else {

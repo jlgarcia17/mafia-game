@@ -688,11 +688,11 @@ async function resolveDay() {
 
   const eliminated = top[0];
   const winCheck   = checkWinAfterElim(data, eliminated);
-  const updates    = {
-    'players/' + eliminated + '/alive': false,
+  const updates = {
     dayResult: { eliminated },
     kills:{}, heals:{}, wiseResults:{}, votes:{}, skipVotes:{}
   };
+  updates['players/' + eliminated + '/alive'] = false;
   if (winCheck) { updates.phase = 'result'; updates.winner = winCheck; }
   else { updates.phase = 'night'; updates.night = (data.night||0)+1; updates.nightResult = {}; updates.dayStart = null; }
   await gameRef.update(updates);

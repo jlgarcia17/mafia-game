@@ -333,6 +333,9 @@ function playMagicRing() {
 // ============================================================
 
 firebase.initializeApp(firebaseConfig);
+ window.addEventListener('beforeunload', function() {
+  if (isHost && gameRef) gameRef.remove();
+});
 const db = firebase.database();
 
 let myId, myName, roomCode, isHost = false, myRole = '';

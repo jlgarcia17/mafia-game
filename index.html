@@ -592,8 +592,7 @@ function renderDay(data) {
   // Night result banner
   if (nr.eliminated) {
     const name = players[nr.eliminated]?.name || 'Someone';
-    const ri   = getRoleInfo(roles[nr.eliminated]);
-    html += `<div class="info-box warning">🌅 <strong style="color:#e8c87a;">${name}</strong> was eliminated by the Mafia. They were a <span class="tag ${ri.tag}">${ri.name}</span></div>`;
+    html += `<div class="info-box warning">🌅 <strong style="color:#e8c87a;">${name}</strong> was eliminated by the Mafia.</div>`;
   } else if (nr.saved) {
     html += `<div class="info-box" style="background:#080820;border-color:#104a10;color:#44aa44;">🌅 The Doctor saved someone last night! No one died.</div>`;
   } else {
@@ -631,16 +630,22 @@ function renderDay(data) {
 
   // Voting buttons
   html += `<div class="card"><p style="font-size:12px;color:#7a6a50;letter-spacing:1px;margin-bottom:10px;">YOUR VOTE</p>`;
-  html += `<button class="btn secondary" style="margin-bottom:12px;${mySkip ? 'border-color:#8b5a1a;color:#cc9944;' : ''}" onclick="castSkip()">
-    ${mySkip ? '✓ You voted to skip' : 'Vote to Skip Night'}
-  </button>`;
-  html += `<ul class="pick-list">`;
-  alive.forEach(([id, p]) => {
-    if (id === myId) return;
-    const sel = myVote === id ? ' selected' : '';
-    html += `<li class="${sel}" onclick="castVote('${id}')">${p.name}${myVote === id ? ' ✓' : ''}</li>`;
-  });
-  html += `</ul></div>`;
+  const amAlive = players[myId]?.alive;
+  if (amAlive) {
+    html += `<button class="btn secondary" style="margin-bottom:12px;${mySkip ? 'border-color:#8b5a1a;color:#cc9944;' : ''}" onclick="castSkip()">
+      ${mySkip ? '✓ You voted to skip' : 'Vote to Skip Night'}
+    </button>`;
+    html += `<ul class="pick-list">`;
+    alive.forEach(([id, p]) => {
+      if (id === myId) return;
+      const sel = myVote === id ? ' selected' : '';
+      html += `<li class="${sel}" onclick="castVote('${id}')">${p.name}${myVote === id ? ' ✓' : ''}</li>`;
+    });
+    html += `</ul>`;
+  } else {
+    html += `<div class="info-box" style="background:#120808;border-color:#4a1010;color:#cc6666;">☠️ You have been eliminated and cannot vote.</div>`;
+  }
+  html += `</div>`;
 
   if (isHost) {
     const majority = Math.floor(totalAlive / 2) + 1;
